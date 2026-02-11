@@ -24,3 +24,69 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+input,
+textarea,
+select {
+  color: #000000; /* text-black for visibility */
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #64748b; /* slate-500 */
+}
+
+/* Modern Thin Scrollbar Styles */
+/* For Webkit browsers (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1; /* slate-300 */
+  border-radius: 10px;
+  transition: background 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8; /* slate-400 */
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: #64748b; /* slate-500 */
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* For Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent; /* thumb track */
+}
+
+/* Dark mode scrollbar */
+@media (prefers-color-scheme: dark) {
+  ::-webkit-scrollbar-thumb {
+    background: #475569; /* slate-600 */
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #64748b; /* slate-500 */
+  }
+
+  ::-webkit-scrollbar-thumb:active {
+    background: #94a3b8; /* slate-400 */
+  }
+
+  * {
+    scrollbar-color: #475569 transparent;
+  }
+}
