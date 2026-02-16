@@ -1,5 +1,8 @@
 import { getProductsAction, getEntitiesAction } from "@/app/actions";
 import SalesEntryForm from "./SalesEntryForm";
+import { auth } from "@clerk/nextjs/server";
+import { AlertCircle } from "lucide-react";
+import Link from "next/link";
 
 export default async function CreateSalePage() {
     const [productsResult, customersResult] = await Promise.all([

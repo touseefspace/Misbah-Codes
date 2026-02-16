@@ -8,7 +8,7 @@ export default function NotFound() {
     const router = useRouter();
 
     return (
-        <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-slate-50 to-slate-100 p-8">
+        <div className="flex min-h-screen flex-col items-center justify-center bg-linear-to-b from-slate-50 to-slate-100 p-8">
             <div className="flex flex-col items-center text-center max-w-md">
                 {/* Icon */}
                 <div className="mb-8 flex h-24 w-24 items-center justify-center rounded-3xl bg-amber-50 text-amber-500 shadow-lg shadow-amber-100/50 border border-amber-100">

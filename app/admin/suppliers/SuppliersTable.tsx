@@ -2,13 +2,19 @@
 
 import { useState } from "react";
 import {
+    Calendar,
+    ChevronRight,
+    Edit,
+    Trash2,
     Truck,
     Phone,
     MapPin,
-    Calendar,
-    ChevronRight
+    Banknote
 } from "lucide-react";
 import DataTable from "@/components/ui/DataTable";
+import { useRouter } from "next/navigation";
+import { cn, formatCurrency } from "@/lib/utils";
+import { useEffect } from "react";
 
 interface Supplier {
     id: string;
@@ -16,14 +22,22 @@ interface Supplier {
     phone?: string;
     location?: string;
     created_at: string;
+    outstanding_balance?: number;
 }
 
 interface SuppliersTableProps {
     initialSuppliers: Supplier[];
+    onEdit: (supplier: Supplier) => void;
+    onDelete: (supplier: Supplier) => void;
 }
 
-export default function SuppliersTable({ initialSuppliers }: SuppliersTableProps) {
-    const [suppliers] = useState<Supplier[]>(initialSuppliers);
+export default function SuppliersTable({ initialSuppliers, onEdit, onDelete }: SuppliersTableProps) {
+    const router = useRouter();
+    const [suppliers, setSuppliers] = useState<Supplier[]>(initialSuppliers);
+
+    useEffect(() => {
+        setSuppliers(initialSuppliers);
+    }, [initialSuppliers]);
 
     const columns = [
         {
@@ -56,6 +70,20 @@ export default function SuppliersTable({ initialSuppliers }: SuppliersTableProps
             )
         },
         {
+            header: "Outstanding",
+            accessor: (s: Supplier) => {
+                const balance = s.outstanding_balance || 0;
+                return (
+                    <span className={cn(
+                        "font-bold text-sm",
+                        balance > 0 ? "text-rose-600" : "text-emerald-600"
+                    )}>
+                        {formatCurrency(balance)}
+                    </span>
+                );
+            }
+        },
+        {
             header: "Onboarded",
             accessor: (s: Supplier) => (
                 <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
@@ -67,9 +95,37 @@ export default function SuppliersTable({ initialSuppliers }: SuppliersTableProps
     ];
 
     const actions = (s: Supplier) => (
-        <div className="flex items-center justify-end">
-            <button className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-100 bg-white text-slate-400 transition-all hover:bg-slate-50 hover:text-slate-800 active:scale-95 shadow-sm">
-                <ChevronRight size={16} />
+        <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+            <button
+                onClick={(e) => {
+                    e.stopPropagation();
+                    // Navigate to Ledger with payment action
+                    router.push(`/admin/suppliers/${s.id}?action=payment`);
+                }}
+                className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-emerald-50 text-slate-400 hover:text-emerald-600 transition-colors"
+                title="Record Payment"
+            >
+                <Banknote size={16} />
+            </button>
+            <button
+                onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit(s);
+                }}
+                className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 hover:text-blue-600 transition-colors"
+                title="Edit Supplier"
+            >
+                <Edit size={16} />
+            </button>
+            <button
+                onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(s);
+                }}
+                className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition-colors"
+                title="Delete Supplier"
+            >
+                <Trash2 size={16} />
             </button>
         </div>
     );
@@ -80,6 +136,7 @@ export default function SuppliersTable({ initialSuppliers }: SuppliersTableProps
             columns={columns}
             actions={actions}
             searchPlaceholder="Search suppliers by name..."
+            onRowClick={(s) => router.push(`/admin/suppliers/${s.id}`)}
         />
     );
 }

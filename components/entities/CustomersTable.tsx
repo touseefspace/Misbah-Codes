@@ -1,16 +1,19 @@
 "use client";
 
 import { useState } from "react";
+import { cn, formatCurrency } from "@/lib/utils";
+import { useRouter } from "next/navigation";
 import {
     User,
     Phone,
     MapPin,
     Calendar,
     ChevronRight,
-    Search
+    Search,
+    Edit,
+    Trash2
 } from "lucide-react";
 import DataTable from "@/components/ui/DataTable";
-import { cn } from "@/lib/utils";
 
 interface Customer {
     id: string;
@@ -18,13 +21,17 @@ interface Customer {
     phone?: string;
     location?: string;
     created_at: string;
+    outstanding_balance?: number;
 }
 
 interface CustomersTableProps {
     initialCustomers: Customer[];
+    onEdit: (customer: Customer) => void;
+    onDelete: (customer: Customer) => void;
 }
 
-export default function CustomersTable({ initialCustomers }: CustomersTableProps) {
+export default function CustomersTable({ initialCustomers, onEdit, onDelete }: CustomersTableProps) {
+    const router = useRouter();
     const [customers] = useState<Customer[]>(initialCustomers);
 
     const columns = [
@@ -58,6 +65,20 @@ export default function CustomersTable({ initialCustomers }: CustomersTableProps
             )
         },
         {
+            header: "Outstanding",
+            accessor: (c: Customer) => {
+                const balance = c.outstanding_balance || 0;
+                return (
+                    <span className={cn(
+                        "font-bold text-sm",
+                        balance > 0 ? "text-rose-600" : "text-emerald-600"
+                    )}>
+                        {formatCurrency(balance)}
+                    </span>
+                );
+            }
+        },
+        {
             header: "Joined",
             accessor: (c: Customer) => (
                 <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
@@ -69,8 +90,22 @@ export default function CustomersTable({ initialCustomers }: CustomersTableProps
     ];
 
     const actions = (c: Customer) => (
-        <div className="flex items-center justify-end">
-            <button className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-100 bg-white text-slate-400 transition-all hover:bg-slate-50 hover:text-slate-800 active:scale-95 shadow-sm">
+        <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+            <button
+                onClick={() => onEdit(c)}
+                className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 hover:text-orange-600 transition-colors"
+                title="Edit Customer"
+            >
+                <Edit size={16} />
+            </button>
+            <button
+                onClick={() => onDelete(c)}
+                className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition-colors"
+                title="Delete Customer"
+            >
+                <Trash2 size={16} />
+            </button>
+            <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-100 bg-white text-slate-400 transition-all hover:bg-slate-50 hover:text-slate-800 active:scale-95 shadow-sm">
                 <ChevronRight size={16} />
             </button>
         </div>
@@ -82,6 +117,7 @@ export default function CustomersTable({ initialCustomers }: CustomersTableProps
             columns={columns}
             actions={actions}
             searchPlaceholder="Search customers by name or contact..."
+            onRowClick={(c) => router.push(`/admin/customers/${c.id}`)}
         />
     );
 }

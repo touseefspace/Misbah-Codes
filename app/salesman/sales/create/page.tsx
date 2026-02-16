@@ -1,18 +1,17 @@
-import { getInventoryAction } from "@/app/actions";
-import { getBranchesAction } from "@/app/actions/branch-actions";
-import SalesmanInventoryClient from "./SalesmanInventoryClient";
+import { getProductsAction, getEntitiesAction } from "@/app/actions";
+import SalesEntryForm from "@/app/admin/sales/create/SalesEntryForm";
 import { auth } from "@clerk/nextjs/server";
 import { AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-export default async function SalesmanInventoryPage() {
+export default async function SalesmanCreateSalePage() {
     const { sessionClaims } = await auth();
     const role = (sessionClaims?.metadata as any)?.role;
     const branchId = (sessionClaims?.metadata as any)?.branch_id;
 
     if (role !== 'salesman') {
-        redirect('/'); // Should not happen with proxy, but good safety
+        redirect('/');
     }
 
     if (!branchId) {
@@ -23,7 +22,7 @@ export default async function SalesmanInventoryPage() {
                 </div>
                 <h2 className="text-xl font-bold text-slate-800 mb-2">Access Restricted</h2>
                 <p className="text-slate-500 max-w-md mb-6">
-                    You are not assigned to any branch. You cannot view inventory until an administrator assigns you to a branch.
+                    You are not assigned to any branch. You cannot record sales until an administrator assigns you to a branch.
                 </p>
                 <Link
                     href="/salesman"
@@ -35,31 +34,27 @@ export default async function SalesmanInventoryPage() {
         );
     }
 
-    // Fetch ALL inventory (so they can see other branches) and ALL branches
-    const [inventoryResult, branchesResult] = await Promise.all([
-        getInventoryAction(), // No branchId = fetch all
-        getBranchesAction()
+    const [productsResult, customersResult] = await Promise.all([
+        getProductsAction(),
+        getEntitiesAction('customer')
     ]);
 
-    if (inventoryResult.error || branchesResult.error) {
-        return <div className="p-8 text-red-500 font-bold">Error loading inventory data.</div>;
+    if (productsResult.error || customersResult.error) {
+        return <div className="p-8 text-red-500 font-bold">Error loading form data.</div>;
     }
 
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight text-slate-800">Branch Inventory</h1>
-                    <p className="text-sm text-slate-500">
-                        View stock levels. Select another branch to request stock transfer.
-                    </p>
+                    <h1 className="text-2xl font-bold tracking-tight text-slate-800">New Sales Transaction</h1>
+                    <p className="text-sm text-slate-500">Record a new sale for your branch.</p>
                 </div>
             </div>
 
-            <SalesmanInventoryClient
-                initialInventory={inventoryResult.data || []}
-                branches={branchesResult.data || []}
-                userBranchId={branchId}
+            <SalesEntryForm
+                products={productsResult.data || []}
+                customers={customersResult.data || []}
             />
         </div>
     );

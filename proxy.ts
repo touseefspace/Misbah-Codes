@@ -39,12 +39,13 @@ export default clerkMiddleware(async (auth, req) => {
     }
 
     // If user is approved but trying to access a route they don't have permission for
+    // If user is approved but trying to access a route they don't have permission for
     if (isApproved) {
         if (isAdminRoute(req) && role !== 'admin') {
-            return NextResponse.redirect(new URL('/salesman', req.url))
+            return NextResponse.redirect(new URL('/', req.url))
         }
         if (isSalesmanRoute(req) && role !== 'salesman' && role !== 'admin') {
-            return NextResponse.redirect(new URL('/admin', req.url))
+            return NextResponse.redirect(new URL('/', req.url))
         }
     }
 

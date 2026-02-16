@@ -59,13 +59,19 @@ function getDisplayUnits(
     };
 }
 
+
 interface SalesmanInventoryClientProps {
     initialInventory: InventoryItem[];
     userBranchId: string;
+    branches: { id: string; name: string; is_admin_branch: boolean }[];
 }
 
-export default function SalesmanInventoryClient({ initialInventory, userBranchId }: SalesmanInventoryClientProps) {
-    const [inventory, setInventory] = useState(initialInventory);
+export default function SalesmanInventoryClient({ initialInventory, userBranchId, branches }: SalesmanInventoryClientProps) {
+    const [selectedBranchId, setSelectedBranchId] = useState<string>(userBranchId);
+
+    const inventory = initialInventory.filter(item =>
+        selectedBranchId === "" ? true : item.branch_id === selectedBranchId
+    );
     const [isRequesting, setIsRequesting] = useState(false);
     const [cart, setCart] = useState<{
         productId: string;
@@ -228,9 +234,32 @@ export default function SalesmanInventoryClient({ initialInventory, userBranchId
         }
     ];
 
+
+    // ... existing columns ...
+
     return (
         <div className="flex gap-6 h-[calc(100vh-100px)]">
-            <div className="flex-1 overflow-auto">
+            <div className="flex-1 overflow-auto space-y-4">
+                {/* Branch Filter */}
+                <div className="flex items-center gap-3 p-4 bg-white rounded-2xl border border-slate-100 shadow-sm">
+                    <div className="flex items-center gap-2 text-slate-500">
+                        <MapPin size={16} />
+                        <span className="text-sm font-medium">Viewing Stock For:</span>
+                    </div>
+                    <select
+                        value={selectedBranchId}
+                        onChange={(e) => setSelectedBranchId(e.target.value)}
+                        className="h-10 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                    >
+                        {branches.map(branch => (
+                            <option key={branch.id} value={branch.id}>
+                                {branch.name} {branch.id === userBranchId ? "(My Branch)" : ""}
+                            </option>
+                        ))}
+                        <option value="">All Branches</option>
+                    </select>
+                </div>
+
                 <DataTable
                     data={inventory}
                     columns={columns}

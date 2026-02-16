@@ -279,12 +279,155 @@ export async function getEntitiesAction(type?: 'customer' | 'supplier') {
         if (type) {
             query = query.eq('type', type);
         }
-        const { data, error } = await query.order('name');
+        const { data: entities, error } = await query.order('name');
         if (error) throw error;
-        return { success: true, data };
+
+        // Fetch outstanding balances for these entities
+        const entityIds = entities.map(e => e.id);
+        const { data: transactions, error: txError } = await supabaseAdmin
+            .from('transactions')
+            .select('entity_id, balance')
+            .in('entity_id', entityIds)
+            .gt('balance', 0);
+
+        if (txError) throw txError;
+
+        // Calculate totals
+        const balanceMap = new Map<string, number>();
+        transactions?.forEach(tx => {
+            const current = balanceMap.get(tx.entity_id) || 0;
+            balanceMap.set(tx.entity_id, current + (Number(tx.balance) || 0));
+        });
+
+        // Merge balance into entities
+        const entitiesWithBalance = entities.map(entity => ({
+            ...entity,
+            outstanding_balance: balanceMap.get(entity.id) || 0
+        }));
+
+        return { success: true, data: entitiesWithBalance };
     } catch (err) {
         console.error("❌ Failed to fetch entities:", err);
         return { success: false, error: "Failed to fetch entities" };
+    }
+}
+
+export async function deleteEntityAction(entityId: string, type: 'customer' | 'supplier') {
+    const { sessionClaims } = await auth();
+    const role = (sessionClaims?.metadata as any)?.role;
+
+    if (role !== 'admin') {
+        throw new Error("Unauthorized: Only admins can delete records.");
+    }
+
+    try {
+        // Check for dependencies (transactions)
+        const { count, error: checkError } = await supabaseAdmin
+            .from('transactions')
+            .select('*', { count: 'exact', head: true })
+            .eq('entity_id', entityId);
+
+        if (checkError) throw checkError;
+
+        if (count && count > 0) {
+            return { success: false, error: "Cannot delete: This record has associated transactions." };
+        }
+
+        const { error: deleteError } = await supabaseAdmin
+            .from('entities')
+            .delete()
+            .eq('id', entityId);
+
+        if (deleteError) throw deleteError;
+
+        const { revalidatePath } = await import('next/cache');
+        revalidatePath('/admin/customers');
+        revalidatePath('/admin/suppliers');
+        revalidatePath('/salesman/customers');
+
+        return { success: true };
+    } catch (err: any) {
+        console.error("❌ Failed to delete entity:", err);
+        return { success: false, error: err.message || "Failed to delete record" };
+    }
+}
+
+export async function getEntityLedgerAction(entityId: string) {
+    try {
+        // Fetch Entity Details
+        const { data: entity, error: entityError } = await supabaseAdmin
+            .from('entities')
+            .select('*')
+            .eq('id', entityId)
+            .single();
+
+        if (entityError) throw entityError;
+
+        // Fetch Transactions
+        const { data: transactions, error: txError } = await supabaseAdmin
+            .from('transactions')
+            .select('*')
+            .eq('entity_id', entityId)
+            .order('created_at', { ascending: true }); // Chronological order
+
+        if (txError) throw txError;
+
+        // Fetch Payments
+        const { data: payments, error: payError } = await supabaseAdmin
+            .from('payments')
+            .select('*')
+            .eq('entity_id', entityId)
+            .order('created_at', { ascending: true });
+
+        if (payError) throw payError;
+
+        // Combine and sort
+        const ledgerItems = [
+            ...(transactions || []).map(t => ({ ...t, item_type: 'transaction' })),
+            ...(payments || []).map(p => ({ ...p, item_type: 'payment' }))
+        ].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+
+        // Calculate Running Balance
+        let runningBalance = 0;
+        const ledgerWithBalance = ledgerItems.map(item => {
+            if (item.item_type === 'transaction') {
+                // Sale increases customer balance (receivable), Purchase increases supplier balance (payable)
+                // Actually, for a customer: Sale = Debit (+), Payment = Credit (-)
+                // For a supplier: Purchase = Credit (+), Payment = Debit (-)
+                // Let's generalize: Transaction Amount is debt increased, Payment Amount is debt decreased.
+                // NOTE: 'transactions' table has 'total_amount'.
+
+                // For Customer:
+                // Sale (total_amount) -> Increases Balance
+                // For Supplier:
+                // Purchase (total_amount) -> Increases Balance (Payable)
+
+                runningBalance += Number(item.total_amount);
+                // Wait, transactions also have 'paid_amount' which implies a payment happened AT THE SAME TIME.
+                // If we treat transaction as the full invoice, and payment as separate, we must be careful not to double count.
+                // But the 'payments' table is populated when 'paid_amount' > 0 in createTransactionAction.
+                // So the 'payments' table ALREADY contains the initial payment.
+                // Thus:
+                // 1. Transaction adds `total_amount` to balance.
+                // 2. Assessment: Payment subtracts `amount` from balance.
+            } else if (item.item_type === 'payment') {
+                runningBalance -= Number(item.amount);
+            }
+            return {
+                ...item,
+                running_balance: runningBalance
+            };
+        });
+
+        // Re-read: The loop above assumes:
+        // Customer: Sale (+), Payment (-)
+        // Supplier: Purchase (+), Payment (-)
+        // This holds true if we view it as "Balance Due".
+
+        return { success: true, data: { entity, ledger: ledgerWithBalance } };
+    } catch (err) {
+        console.error("❌ Failed to fetch ledger:", err);
+        return { success: false, error: "Failed to fetch ledger" };
     }
 }
 

@@ -126,6 +126,8 @@ All admin routes are protected by middleware - non-admin users attempting to acc
 - Same structure as Customers page
 - DataTable with supplier list
 - **New Supplier** button opens EntityModal
+- **Payment Action** - 💵 Icon opens Ledger to record payments
+- **FIFO Payment Flow** - Automatic allocation of payments to oldest invoices first
 - Suppliers are used in Purchase transactions
 
 ---
@@ -222,8 +224,9 @@ Salesmen have restricted access - they can only see their assigned branch data a
 **Purpose:** Track status of submitted stock requests.
 
 **UI/UX:**
-- DataTable showing salesman's own transfer requests
+- DataTable showing all transfer requests (Incoming & Outgoing unified)
 - Columns: Date, Status, Items
+- **Details Modal** - Click row to view full transfer details
 - Status tracking (Pending → Completed/Rejected)
 - Cannot create requests directly here - done from Inventory page
 
@@ -269,7 +272,9 @@ Salesmen have restricted access - they can only see their assigned branch data a
 - **Cards:** Rounded-3xl with subtle shadows and hover lift
 - **Buttons:** Rounded-xl with active scale-95 animation
 - **Modals:** Backdrop blur with smooth fade-in/zoom-in
-- **Tables:** Clean DataTable with search and pagination
+- **Tables:** Clean DataTable with search, pagination, and refresh
+- **Scrollbars:** Custom thin, modern scrollbars matching theme
+- **Inputs:** High-contrast text for better readability
 - **Badges:** Rounded-full with color-coded backgrounds
 
 ### Responsive Design
@@ -427,9 +432,10 @@ See [IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md) for detailed specificatio
 - [x] Multi-branch inventory
 - [x] Stock transfer system (multi-item)
 - [x] Unified Organization page
+- [x] Ledger with FIFO payments
+- [x] Salesman Transfer UI Refactor
 
 ### In Progress 🔄
-- [ ] Ledger with FIFO payments
 - [ ] Reports & analytics
 - [ ] PDF invoice generation
 
